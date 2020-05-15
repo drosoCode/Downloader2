@@ -9,8 +9,7 @@ WORKDIR /home
 COPY package.json .
 RUN npm install
 
-#COPY . .
+COPY . .
 
 # run xvfb in background and start script
-CMD Xvfb :99 -ac -screen 0 1920x1080x16 -nolisten tcp &\
-    DISPLAY=:99 node main.js
+CMD Xvfb :99 -ac -screen 0 1920x1080x16 -nolisten tcp & DISPLAY=:99 node main.js

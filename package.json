@@ -6,7 +6,7 @@
   "dependencies": {
     "jdownloader-api": "^1.1.2",
     "puppeteer": "^3.0.4",
-    "request": "^2.88.2"
+    "axios": "^0.19.2"
   },
   "devDependencies": {},
   "scripts": {
