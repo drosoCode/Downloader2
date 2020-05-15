@@ -1,13 +1,16 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const path = require('path');
 const axios = require('axios');
 const myjd = require('jdownloader-api');
 
 const configFile = 'config/animes.json';
+const supportedExts = ['mkv', 'mp4', 'avi'];
 
 var config = JSON.parse(fs.readFileSync(configFile));
 
 
+// download part
 async function getLinks(browser, url, epNum, hosters)
 {
     const page = await browser.newPage();
@@ -74,11 +77,11 @@ async function addLinks(browser, id)
             let link = await resolveDLProtect(browser, value);
             if(link != null)
             {
-                console.log("New link for "+config["items"][id]["name"]+" EP"+key+": "+link);
+                console.log("New link for "+config["items"][id]["names"][0]+" EP"+key+": "+link);
 
                 await myjd.addLinks(link, config["settings"]["jdID"], true);
 
-                let msgText = "Adding episode "+key+" for "+config["items"][id]["name"];
+                let msgText = "Adding episode "+key+" for "+config["items"][id]["names"][0];
                 await axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
             }
         }
@@ -90,6 +93,69 @@ async function addLinks(browser, id)
 }
 
 
+// move downloaded files part
+
+function checkName(names, data) {
+    let ret = false;
+    names.forEach(n => {
+        let w = n.split(' ');
+        let l = "";
+        w.forEach(el => { l += el.charAt(0) });
+        let reg = '('+w.join('.*')+')|('+l+')';
+        if(new RegExp(reg, 'i').exec(data) != null)
+            ret = true;
+    });
+    return ret;
+}
+
+function identifyFile(name) {
+    for(let i=0; i<config["items"].length; i++)
+        if(checkName(config['items'][i]['names'], name))
+            return i;
+    return -1;
+}
+
+function processFile(filePath, fileName) {
+    
+    let ext = fileName.substring(fileName.lastIndexOf('.')+1);
+    if(supportedExts.includes(ext))
+    {
+        let i = identifyFile(file);
+        if(i != -1)
+        {
+            let num = fileName.match('(?<=[ +_\\.\\-Ee])\\d{1,3}(?=[ +_\\.\\-])')[0];
+            let name = config['items'][i]['prefix']+num+'.'+ext;
+
+            //send notif
+            let msgText = "Finished Download for "+config["items"][i]["names"][0]+" E"+num;
+            axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
+
+            //move file to dest
+            fs.renameSync(filePath, path.join(config['settings']['commonMoveDestDir'], config['settings']['moveDir'], name));
+        }
+    }
+}
+
+function checkFinishedDownloads(dir)
+{
+    files = fs.readdirSync(dir);
+
+    //rm empty dir
+    if(files.length == 0 && dir != config["settings"]["commonDlDir"])
+        fs.rmdirSync(dir);
+    //list files
+    files.forEach(file => {
+        let filePath = path.join(dir, file)
+        if (fs.statSync(filePath).isDirectory()) {
+            filelist = checkFinishedDownloads(filePath, file);
+        }
+        else {
+            processFile(filePath);
+        }
+    });
+}
+
+// main part
 (async () => {
     const browser = await puppeteer.launch({executablePath: 'chromium', args: ['--no-sandbox'], headless: false});
     myjd.connect(config["settings"]["jdUser"], config["settings"]["jdPassword"]);
@@ -99,4 +165,7 @@ async function addLinks(browser, id)
 
     fs.writeFileSync(configFile, JSON.stringify(config));
     await browser.close();
+
+    if(config["settings"]["commonDlDir"] != undefined && config["settings"]["commonDlDir"] != false && config["settings"]["commonDlDir"] != "")
+        checkFinishedDownloads(config["settings"]["commonDlDir"]);
 })();
