@@ -3,11 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const myjd = require('jdownloader-api');
+const exec = require('child_process').exec;
 
 const configFile = 'config/animes.json';
 const supportedExts = ['mkv', 'mp4', 'avi'];
 
 var config = JSON.parse(fs.readFileSync(configFile));
+var foundFinishedDl = false;
 
 
 // download part
@@ -116,11 +118,10 @@ function identifyFile(name) {
 }
 
 function processFile(filePath, fileName) {
-    
     let ext = fileName.substring(fileName.lastIndexOf('.')+1);
     if(supportedExts.includes(ext))
     {
-        let i = identifyFile(file);
+        let i = identifyFile(fileName);
         if(i != -1)
         {
             let num = fileName.match('(?<=[ +_\\.\\-Ee])\\d{1,3}(?=[ +_\\.\\-])')[0];
@@ -131,7 +132,11 @@ function processFile(filePath, fileName) {
             axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
 
             //move file to dest
-            fs.renameSync(filePath, path.join(config['settings']['commonMoveDestDir'], config['settings']['moveDir'], name));
+            let dest = path.join(config['settings']['commonMoveDestDir'], config['items'][i]['moveDir'], name);
+            console.log("Moving file "+filePath+" to "+dest);
+            exec('mv "'+filePath+'" "'+dest+'"');
+
+            foundFinishedDl = true;
         }
     }
 }
@@ -147,10 +152,10 @@ function checkFinishedDownloads(dir)
     files.forEach(file => {
         let filePath = path.join(dir, file)
         if (fs.statSync(filePath).isDirectory()) {
-            filelist = checkFinishedDownloads(filePath, file);
+            checkFinishedDownloads(filePath, file);
         }
         else {
-            processFile(filePath);
+            processFile(filePath, file);
         }
     });
 }
@@ -168,4 +173,8 @@ function checkFinishedDownloads(dir)
 
     if(config["settings"]["commonDlDir"] != undefined && config["settings"]["commonDlDir"] != false && config["settings"]["commonDlDir"] != "")
         checkFinishedDownloads(config["settings"]["commonDlDir"]);
+
+    if(config["settings"]["finishDlScript"] != undefined && config["settings"]["finishDlScript"] != "" && foundFinishedDl)
+        exec(config["settings"]["finishDlScript"]);
+    
 })();
