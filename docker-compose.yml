@@ -1,0 +1,10 @@
+version: "3"
+services:
+  downloader:
+    build: .
+    environment: 
+      TZ: Europe/Paris
+    volumes:
+        - /mnt/nas/Downloads:/home/OrigDir
+        - /mnt/nas/Videos/Series:/home/DestDir
+        - /mnt/docker/Volumes/Downloader/config:/home/config
