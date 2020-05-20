@@ -12,10 +12,10 @@ WORKDIR /home
 COPY package.json .
 RUN npm install
 
-COPY . .
+ADD . .
 
 RUN apt-get update && apt-get install -y cron \
-  && echo "*/30 17-00 * * * cd /home && ./start.sh" >> cronfile \
+  && echo "*/30 00,17-23 * * * cd /home && ./start.sh" >> cronfile \
   && crontab cronfile && rm cronfile
 
 CMD "./entrypoint.sh"

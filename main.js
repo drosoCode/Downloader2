@@ -48,24 +48,27 @@ async function resolveDLProtect(browser, url) {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     
-    if (await page.evaluate(() => document.body.innerText.includes('DDoS protection by Cloudflare')))
+    while (await page.evaluate(() => document.body.innerText.includes('DDoS protection by Cloudflare')))
         await page.waitForNavigation().catch();
     
     let link = null;
-    for(let i=0; i<3; i++)
+    for(let i=0; i<4; i++)
     {
         try {
-            await page.waitForSelector('.lienet', { timeout: 300 });
+            await page.waitForSelector('.lienet', { timeout: 500 });
             link = await page.evaluate(() => {return document.querySelector('.lienet').childNodes[0].href;});
+            break;
         }
         catch (err) {
             try{
-                await page.waitForSelector('.continuer', { timeout: 300 });
+                await page.waitForSelector('.continuer', { timeout: 500 });
                 await page.click('.continuer');
             }
             catch (err){}
         }
     }
+    console.log("sukon")
+    console.log(link)
     return link;    
 }
 
@@ -88,7 +91,7 @@ async function addLinks(browser, id)
             }
         }
 
-        let max = Object.keys(links)[Object.keys(links).length-1]
+        let max = parseInt(Object.keys(links)[Object.keys(links).length-1])
         if(max > config["items"][id]["maxEp"])
             config["items"][id]["maxEp"] = max;
     }
