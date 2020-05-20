@@ -4,6 +4,7 @@ const path = require('path');
 const axios = require('axios');
 const myjd = require('jdownloader-api');
 const exec = require('child_process').exec;
+const CronJob = require('cron').CronJob;
 
 const configFile = 'config/animes.json';
 const supportedExts = ['mkv', 'mp4', 'avi'];
@@ -163,7 +164,8 @@ function checkFinishedDownloads(dir)
 }
 
 // main part
-(async () => {
+async function checkDownloads()
+{
     const browser = await puppeteer.launch({executablePath: 'chromium', args: ['--no-sandbox'], headless: false});
     myjd.connect(config["settings"]["jdUser"], config["settings"]["jdPassword"]);
 
@@ -178,5 +180,8 @@ function checkFinishedDownloads(dir)
 
     if(config["settings"]["finishDlScript"] != undefined && config["settings"]["finishDlScript"] != "" && foundFinishedDl)
         exec(config["settings"]["finishDlScript"]);
-    
-})();
+}
+
+config['settings']['cron'].forEach(el => {
+    new CronJob('* * * * * *', checkDownloads(), null, true, config['settings']['timezone']);
+});
