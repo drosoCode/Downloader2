@@ -90,7 +90,7 @@ async function addLinks(browser, id)
 
         let max = Object.keys(links)[Object.keys(links).length-1]
         if(max > config["items"][id]["maxEp"])
-            config["items"][id]["link"] = max;
+            config["items"][id]["maxEp"] = max;
     }
 }
 
