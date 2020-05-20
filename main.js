@@ -67,7 +67,6 @@ async function resolveDLProtect(browser, url) {
             catch (err){}
         }
     }
-    console.log("sukon")
     console.log(link)
     return link;    
 }
