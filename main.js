@@ -75,7 +75,6 @@ async function resolveDLProtect(browser, url) {
 
 async function addLinks(browser, id)
 {
-    console.log("zoighglh")
     if(config["items"][id]["enabled"])
     {
         const links = await getLinks(browser, config["settings"]["baseURL"]+config["items"][id]["link"], config["items"][id]["maxEp"], config["settings"]["allowedHosters"]);
