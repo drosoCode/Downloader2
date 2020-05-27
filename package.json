@@ -7,7 +7,7 @@
     "jdownloader-api": "^1.1.2",
     "puppeteer": "^3.0.4",
     "axios": "^0.19.2",
-    "cron": "^1.8.2"
+    "node-cron": "^2.0.3"
   },
   "devDependencies": {},
   "scripts": {

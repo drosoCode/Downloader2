@@ -14,4 +14,4 @@ RUN npm install
 
 ADD . .
 
-CMD Xvfb :99 -ac -screen 0 1280x720x16 -nolisten tcp & DISPLAY=:99 node main.js
+CMD Xvfb :97 -ac -screen 0 1280x720x16 -nolisten tcp & DISPLAY=:97 node main.js

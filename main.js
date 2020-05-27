@@ -4,13 +4,14 @@ const path = require('path');
 const axios = require('axios');
 const myjd = require('jdownloader-api');
 const exec = require('child_process').exec;
-const CronJob = require('cron').CronJob;
+const cron = require('node-cron');
 
 const configFile = 'config/animes.json';
 const supportedExts = ['mkv', 'mp4', 'avi'];
 
 var config = JSON.parse(fs.readFileSync(configFile));
 var foundFinishedDl = false;
+var downloading = 0;
 
 
 // download part
@@ -74,6 +75,7 @@ async function resolveDLProtect(browser, url) {
 
 async function addLinks(browser, id)
 {
+    console.log("zoighglh")
     if(config["items"][id]["enabled"])
     {
         const links = await getLinks(browser, config["settings"]["baseURL"]+config["items"][id]["link"], config["items"][id]["maxEp"], config["settings"]["allowedHosters"]);
@@ -88,6 +90,7 @@ async function addLinks(browser, id)
 
                 let msgText = "Adding episode "+key+" for "+config["items"][id]["names"][0];
                 await axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
+                downloading++;
             }
         }
 
@@ -139,6 +142,7 @@ function processFile(filePath, fileName) {
             console.log("Moving file "+filePath+" to "+dest);
             exec('mv "'+filePath+'" "'+dest+'"');
 
+            downloading--;
             foundFinishedDl = true;
         }
     }
@@ -163,9 +167,20 @@ function checkFinishedDownloads(dir)
     });
 }
 
+function checkFiles()
+{
+    console.log("Running file scan");
+    if(config["settings"]["commonDlDir"] != undefined && config["settings"]["commonDlDir"] != false && config["settings"]["commonDlDir"] != "")
+        checkFinishedDownloads(config["settings"]["commonDlDir"]);
+
+    if(config["settings"]["finishDlScript"] != undefined && config["settings"]["finishDlScript"] != "" && foundFinishedDl)
+        exec(config["settings"]["finishDlScript"]);
+}
+
 // main part
 async function checkDownloads()
 {
+    console.log("Running download scan");
     const browser = await puppeteer.launch({executablePath: 'chromium', args: ['--no-sandbox'], headless: false});
     myjd.connect(config["settings"]["jdUser"], config["settings"]["jdPassword"]);
 
@@ -175,13 +190,16 @@ async function checkDownloads()
     fs.writeFileSync(configFile, JSON.stringify(config));
     await browser.close();
 
-    if(config["settings"]["commonDlDir"] != undefined && config["settings"]["commonDlDir"] != false && config["settings"]["commonDlDir"] != "")
-        checkFinishedDownloads(config["settings"]["commonDlDir"]);
-
-    if(config["settings"]["finishDlScript"] != undefined && config["settings"]["finishDlScript"] != "" && foundFinishedDl)
-        exec(config["settings"]["finishDlScript"]);
+    checkFiles();
+    if(downloading > 0 && config['settings']['downloadingDelay'] != undefined)
+    {
+        setTimeout(function () {
+            checkFiles();
+        }, config['settings']['downloadingDelay']*1000);
+    }
 }
 
 config['settings']['cron'].forEach(el => {
-    new CronJob('* * * * * *', checkDownloads(), null, true, config['settings']['timezone']);
+    console.log(el)
+    cron.schedule(el, async () => {checkDownloads()});
 });
