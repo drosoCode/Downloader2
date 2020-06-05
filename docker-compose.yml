@@ -1,10 +1,18 @@
-version: "3"
+version: '3'
 services:
-  downloader:
+  downloader:  
     build: .
-    environment: 
-      TZ: Europe/Paris
+    shm_size: '1gb' 
+    environment:
+      # Adjust to your screen size
+      - TZ=Europe/Paris
+      - DISPLAY_WIDTH=1600
+      - DISPLAY_HEIGHT=968
     volumes:
         - /mnt/nas/Downloads:/home/OrigDir
         - /mnt/nas/Videos/Series:/home/DestDir
         - /mnt/docker/Volumes/Downloader/config:/home/config
+        - /mnt/downloader/chrome:/root/.config/chromium/
+    ports:
+      - 8070:8080
+      - 9222:9223

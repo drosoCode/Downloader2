@@ -20,12 +20,19 @@ async function getLinks(browser, url, epNum, hosters)
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'domcontentloaded' });
         
-    if (await page.evaluate(() => document.body.innerText.includes('DDoS protection by Cloudflare')))
-        await page.waitForNavigation({timeout: 60000});
+    while (await page.evaluate(() => document.body.innerText.includes('DDoS protection by Cloudflare')))
+        await page.waitForNavigation({timeout: 0});
+
+    while (await page.evaluate(() => document.body.innerText.includes('One more step')))
+    {
+        let msgText = "Cloudflare a un nouveau captcha de merde: http://10.10.2.1:8070/vnc.html";
+        axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
+        await page.waitForNavigation({timeout: 0});
+    }
 
     await page.waitForSelector('.downloadsortsonlink').catch(() => {return {}});   
 
-    return await page.evaluate((hosters, epNum) => {
+    let retData = await page.evaluate((hosters, epNum) => {
         const tables = document.querySelectorAll('.downloadsortsonlink');
         let ret = new Object();
         
@@ -35,14 +42,21 @@ async function getLinks(browser, url, epNum, hosters)
                 for(let i=1; i<el.rows.length-1; i++)
                 {
                     let num = el.rows[i].childNodes[2].childNodes[0].textContent;
+                    console.log(num);
                     num = parseInt(num.substring(8), 10);
                     if(num > epNum && !(num in ret))
-                        ret[num] = el.rows[i].childNodes[2].childNodes[0].href;
+                    {
+                        let link = el.rows[i].childNodes[2].childNodes[0].href;
+                        console.log("Found new item for num "+num+": "+link);
+                        ret[num] = link;
+                    }
                 }
             }
         });
         return ret;
     }, hosters, epNum);
+    await page.close();
+    return retData;
 }
 
 async function resolveDLProtect(browser, url) {
@@ -52,6 +66,13 @@ async function resolveDLProtect(browser, url) {
     
     while (await page.evaluate(() => document.body.innerText.includes('DDoS protection by Cloudflare')))
         await page.waitForNavigation().catch();
+        
+    while (await page.evaluate(() => document.body.innerText.includes('One more step')))
+    {
+        let msgText = "Cloudflare a un nouveau captcha de merde: http://10.10.2.1:8070/vnc.html";
+        axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
+        await page.waitForNavigation({timeout: 0});
+    }
     
     let link = null;
     for(let i=0; i<4; i++)
@@ -69,13 +90,14 @@ async function resolveDLProtect(browser, url) {
             catch (err){}
         }
     }
+    await page.close();
     console.log(link)
-    return link;    
+    return link; 
 }
 
 async function addLinks(browser, id)
 {
-    console.log("zoighglh")
+    console.log("Testing "+config["items"][id]["names"][0]);
     if(config["items"][id]["enabled"])
     {
         const links = await getLinks(browser, config["settings"]["baseURL"]+config["items"][id]["link"], config["items"][id]["maxEp"], config["settings"]["allowedHosters"]);
@@ -181,14 +203,14 @@ function checkFiles()
 async function checkDownloads()
 {
     console.log("Running download scan");
-    const browser = await puppeteer.launch({executablePath: 'chromium', args: ['--no-sandbox'], headless: false});
+    //const browser = await puppeteer.launch({executablePath: 'chromium', args: ['--no-sandbox'], headless: false});
+    const browser = await puppeteer.connect({browserURL: "http://127.0.0.1:9222", defaultViewport: null});
     myjd.connect(config["settings"]["jdUser"], config["settings"]["jdPassword"]);
 
     for(let i=0; i<config["items"].length; i++)
         await addLinks(browser, i);
 
     fs.writeFileSync(configFile, JSON.stringify(config));
-    await browser.close();
 
     checkFiles();
     if(downloading > 0 && config['settings']['downloadingDelay'] != undefined)
@@ -199,6 +221,8 @@ async function checkDownloads()
     }
 }
 
+checkDownloads();
+console.log('Setting up CRON: ');
 config['settings']['cron'].forEach(el => {
     console.log(el)
     cron.schedule(el, async () => {checkDownloads()});
