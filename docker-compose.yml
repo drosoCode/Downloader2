@@ -4,7 +4,6 @@ services:
     build: .
     shm_size: '1gb' 
     environment:
-      # Adjust to your screen size
       - TZ=Europe/Paris
       - DISPLAY_WIDTH=1600
       - DISPLAY_HEIGHT=968
@@ -15,4 +14,7 @@ services:
         - /mnt/downloader/chrome:/root/.config/chromium/
     ports:
       - 8070:8080
-      - 9222:9223
+    logging:
+        driver: "gelf"
+        options:
+            gelf-address: "udp://kirito:12201"
