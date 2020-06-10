@@ -25,7 +25,7 @@ async function getLinks(browser, url, epNum, hosters)
 
     while (await page.evaluate(() => document.body.innerText.includes('One more step')))
     {
-        let msgText = "Cloudflare a un nouveau captcha de merde: http://10.10.2.1:8070/vnc.html";
+        let msgText = "New Cloudflare captcha: "+config['settings']['noVNCAddr'];
         axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
         await page.waitForNavigation({timeout: 0});
     }
