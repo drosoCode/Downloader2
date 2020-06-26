@@ -30,20 +30,18 @@ async function getLinks(browser, url, epNum, hosters)
         await page.waitForNavigation({timeout: 0});
     }
 
-    await page.waitForSelector('.downloadsortsonlink').catch(() => {return {}});   
-
+    await page.waitForSelector('.downloadsortsonlink').catch(() => {console.log('ERROR');});
     let retData = await page.evaluate((hosters, epNum) => {
         const tables = document.querySelectorAll('.downloadsortsonlink');
         let ret = new Object();
-        
         tables.forEach(el => {
             if(hosters.includes(el.rows[0].childNodes[2].textContent))
             {
                 for(let i=1; i<el.rows.length-1; i++)
                 {
                     let num = el.rows[i].childNodes[2].childNodes[0].textContent;
-                    console.log(num);
-                    num = parseInt(num.substring(8), 10);
+                    num = num.split(' ');
+                    num = parseInt(num[num.length-2], 10);
                     if(num > epNum && !(num in ret))
                     {
                         let link = el.rows[i].childNodes[2].childNodes[0].href;
@@ -54,7 +52,9 @@ async function getLinks(browser, url, epNum, hosters)
             }
         });
         return ret;
+
     }, hosters, epNum);
+    console.log(retData);
     await page.close();
     return retData;
 }
@@ -97,9 +97,9 @@ async function resolveDLProtect(browser, url) {
 
 async function addLinks(browser, id)
 {
-    console.log("Testing "+config["items"][id]["names"][0]);
     if(config["items"][id]["enabled"])
     {
+        console.log("Testing "+config["items"][id]["names"][0]);
         const links = await getLinks(browser, config["settings"]["baseURL"]+config["items"][id]["link"], config["items"][id]["maxEp"], config["settings"]["allowedHosters"]);
         for (let [key, value] of Object.entries(links)) 
         {
