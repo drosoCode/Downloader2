@@ -25,7 +25,9 @@ COPY supervisord.conf /etc/supervisord.conf
 
 WORKDIR /home
 
-ADD downloader/ .
+ADD downloader/package.json package.json
+ADD downloader/package-lock.json package-lock.json
 RUN npm install
+ADD downloader/main.js main.js
 
 CMD ["supervisord", "-c", "/etc/supervisord.conf"]
