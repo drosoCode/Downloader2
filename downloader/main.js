@@ -1,4 +1,8 @@
-const puppeteer = require('puppeteer');
+//const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+puppeteer.use(StealthPlugin());
+
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -13,6 +17,15 @@ var config = JSON.parse(fs.readFileSync(configFile));
 var foundFinishedDl = false;
 var downloading = 0;
 
+//helpers
+function sleep(time) {
+    var stop = new Date().getTime();
+    while(new Date().getTime() < stop + time) {}
+}
+
+function sendDiscord(message) {
+    axios.post(config["settings"]["discordWebHookUrl"], {content: message}).catch(() => {console.log('error')});
+}
 
 // download part
 async function getLinks(browser, url, epNum, hosters)
@@ -25,8 +38,7 @@ async function getLinks(browser, url, epNum, hosters)
 
     while (await page.evaluate(() => document.body.innerText.includes('One more step')))
     {
-        let msgText = "New Cloudflare captcha: "+config['settings']['noVNCAddr'];
-        axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
+        sendDiscord("New Cloudflare captcha");
         await page.waitForNavigation({timeout: 0});
     }
 
@@ -69,8 +81,7 @@ async function resolveDLProtect(browser, url) {
         
     while (await page.evaluate(() => document.body.innerText.includes('One more step')))
     {
-        let msgText = "New Cloudflare captcha: "+config['settings']['noVNCAddr'];
-        axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
+        sendDiscord("New Cloudflare captcha");
         await page.waitForNavigation({timeout: 0});
     }
     
@@ -84,8 +95,20 @@ async function resolveDLProtect(browser, url) {
         }
         catch (err) {
             try{
-                await page.waitForSelector('.continuer', { timeout: 500 });
-                await page.click('.continuer');
+                await page.waitForSelector('.download', { timeout: 500 });
+                await page.click('.download');
+                
+                sleep(5000); //sleep 5 sec
+
+                if(await page.$("iframe[title='recaptcha challenge']"))
+                {
+                    console.log("FOUND");
+                    sendDiscord("New Cloudflare captcha");
+                    console.log("FOUND A");
+
+                    while(await page.$("iframe[title='recaptcha challenge']"))
+                    { sleep(5000); }
+                }
             }
             catch (err){}
         }
@@ -110,8 +133,7 @@ async function addLinks(browser, id)
 
                 await myjd.addLinks(link, config["settings"]["jdID"], true);
 
-                let msgText = "Adding episode "+key+" for "+config["items"][id]["names"][0];
-                await axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
+                sendDiscord("Adding episode "+key+" for "+config["items"][id]["names"][0]);
                 downloading++;
             }
         }
@@ -156,8 +178,7 @@ function processFile(filePath, fileName) {
             let name = config['items'][i]['prefix']+num+'.'+ext;
 
             //send notif
-            let msgText = "Finished Download for "+config["items"][i]["names"][0]+" E"+num;
-            axios.post(config["settings"]["discordWebHookUrl"], {content: msgText})
+            sendDiscord("Finished Download for "+config["items"][i]["names"][0]+" E"+num);
 
             //move file to dest
             let dest = path.join(config['settings']['commonMoveDestDir'], config['items'][i]['moveDir'], name);
