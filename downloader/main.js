@@ -31,6 +31,9 @@ function sendDiscord(message) {
 async function getLinks(browser, url, epNum, hosters)
 {
     const page = await browser.newPage();
+    
+    //page.on('console', consoleObj => console.log(consoleObj.text()));
+
     await page.goto(url, { waitUntil: 'domcontentloaded' });
         
     while (await page.evaluate(() => document.body.innerText.includes('DDoS protection by Cloudflare')))
@@ -47,16 +50,16 @@ async function getLinks(browser, url, epNum, hosters)
         const tables = document.querySelectorAll('.downloadsortsonlink');
         let ret = new Object();
         tables.forEach(el => {
-            if(hosters.includes(el.rows[0].childNodes[2].textContent))
+            if(hosters.includes(el.rows[0].childNodes[1].childNodes[1].textContent))
             {
                 for(let i=1; i<el.rows.length-1; i++)
                 {
-                    let num = el.rows[i].childNodes[2].childNodes[0].textContent;
+                    let num = el.rows[i].childNodes[1].childNodes[0].textContent;
                     num = num.split(' ');
                     num = parseInt(num[num.length-2], 10);
                     if(num > epNum && !(num in ret))
                     {
-                        let link = el.rows[i].childNodes[2].childNodes[0].href;
+                        let link = el.rows[i].childNodes[1].childNodes[0].href;
                         console.log("Found new item for num "+num+": "+link);
                         ret[num] = link;
                     }
@@ -89,22 +92,20 @@ async function resolveDLProtect(browser, url) {
     for(let i=0; i<4; i++)
     {
         try {
-            await page.waitForSelector('.lienet', { timeout: 500 });
+            await page.waitForSelector('.lienet', { timeout: 500 }).catch(() => {console.log('lienet timeout')});
             link = await page.evaluate(() => {return document.querySelector('.lienet').childNodes[0].href;});
             break;
         }
         catch (err) {
             try{
-                await page.waitForSelector('.download', { timeout: 500 });
+                await page.waitForSelector('.download', { timeout: 1000 }).catch(() => {console.log('download timeout')});
                 await page.click('.download');
                 
                 sleep(5000); //sleep 5 sec
 
                 if(await page.$("iframe[title='recaptcha challenge']"))
                 {
-                    console.log("FOUND");
                     sendDiscord("New Cloudflare captcha");
-                    console.log("FOUND A");
 
                     while(await page.$("iframe[title='recaptcha challenge']"))
                     { sleep(5000); }
