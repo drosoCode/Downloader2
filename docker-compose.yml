@@ -8,13 +8,9 @@ services:
       - DISPLAY_WIDTH=1600
       - DISPLAY_HEIGHT=968
     volumes:
-        - /mnt/nas/Downloads:/home/OrigDir
-        - /mnt/nas/Videos/Series:/home/DestDir
-        - /mnt/docker/Volumes/Downloader/config:/home/config
-        - /mnt/downloader/chrome:/root/.config/chromium/
+        - /nas/Downloads:/home/OrigDir
+        - /nas/Videos/Series:/home/DestDir
+        - /app/docker/data/Downloader/config:/home/config
+        - /app/docker/data/Downloader/chrome:/root/.config/chromium/
     ports:
       - 8070:8080
-    logging:
-        driver: "gelf"
-        options:
-            gelf-address: "udp://kirito:12201"
